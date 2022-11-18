@@ -1,0 +1,65 @@
+import requests
+import pandas as pd
+import time
+
+APIKEY = '' ##use your personl apikey here
+
+def query(endpoint, apikey=APIKEY, **kwargs):
+    """Sends kwargs to the specified endpoint, using apikey for authentication"""
+    params = kwargs
+    params['apikey'] = apikey
+    url = "https://api.harvardartmuseums.org/{}".format(endpoint)
+    R = requests.get(url,params=params)
+    return R
+
+complete_19C = query("object", century="19th century", classification="Sculpture", culture="American", sort="totalpageviews", sortorder="desc", size=100, page=1).json()
+
+def searchfemale(gender):
+    for person in record['people']:
+        if person['gender'] == gender:
+            objects_by_women.append(record)
+            break
+
+def searchmale(gender):
+    for person in record['people']:
+        if person['gender'] == gender:
+            objects_by_men.append(record)
+            break
+
+objects_by_men = []
+keepGoing = True
+page = 1
+
+while keepGoing:
+    R = query("object", century="19th century" ,classification="Sculpture", culture="American", size=100, page=page)
+    time.sleep(.5)
+    records = R.json()["records"]
+    for record in records:
+        if 'people' in record:
+            searchmale("male")
+    if complete_19C['info']['pages'] == page:
+        keepGoing = False
+    else:
+        page += 1
+
+objects_by_women = []
+keepGoing = True
+page = 1
+
+while keepGoing:
+    R = query("object", century="19th century", classification="Sculpture", culture="American", size=100, page=page)
+    time.sleep(.5)
+    records = R.json()["records"]
+    for record in records:
+        if 'people' in record:
+            searchfemale("female")
+    if complete_19C['info']['pages'] == page:
+        keepGoing = False
+    else:
+        page += 1
+
+df = pd.DataFrame(objects_by_women)
+df.to_csv("objects_by_women.csv",index=None)
+
+df = pd.DataFrame(objects_by_men)
+df.to_csv("objects_by_men.csv",index=None)
